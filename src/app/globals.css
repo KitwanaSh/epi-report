@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+
+@theme {
+  /* Primary */
+  --color-primary: #0F172A;
+  --color-primary-dark: #0B1220;
+  --color-primary-light: #E2E8F0;
+  --color-primary-hover: #1E293B;
+
+  /* Surface */
+  --color-surface-white: #FFFFFF;
+  --color-surface-light: #F8FAFC;
+  --color-surface-border: #E2E8F0;
+
+  /* Text */
+  --color-text-primary: #0F172A;
+  --color-text-muted: #64748B;
+
+  /* Status */
+  --color-status-error: #DC2626;
+  --color-status-error-light: #FEE2E2;
+  --color-status-success: #16A34A;
+  --color-status-success-light: #DCFCE7;
+
+  /* Radius */
+  --radius-card: 16px;
+
+  /* Shadow */
+  --shadow-card: 0 4px 6px rgba(0,0,0,0.05);
+  --shadow-card-md: 0 10px 15px rgba(0,0,0,0.08);
+
+  /* Font */
+  --font-serif: Georgia, serif;
+}
+
+@layer base {
+  body {
+    @apply bg-surface-white text-text-primary font-serif;
+    @apply antialiased;
+  }
+
+  h1 {
+    @apply text-[28px] font-bold leading-tight;
+  }
+
+  h2 {
+    @apply text-[22px] font-bold leading-tight;
+  }
+
+  h3 {
+    @apply text-[18px] font-bold leading-tight;
+  }
+
+  p {
+    @apply text-[16px] leading-relaxed;
+  }
+
+  small {
+    @apply text-[14px];
+  }
+}
+
+@layer components {
+  /* Card container */
+  .card {
+    @apply bg-surface-white rounded-card shadow-card border border-surface-border;
+    @apply p-6;
+  }
+
+  .card-elevated {
+    @apply bg-surface-white rounded-card shadow-card-md border border-surface-border;
+    @apply p-6;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply bg-primary text-white font-serif font-bold;
+    @apply px-6 py-3 rounded-card;
+    @apply shadow-card hover:shadow-card-md;
+    @apply hover:bg-primary-dark active:bg-primary-hover;
+    @apply transition-all duration-200;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary disabled:hover:shadow-card;
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply bg-surface-white text-primary font-serif font-bold;
+    @apply px-6 py-3 rounded-card;
+    @apply border-2 border-primary;
+    @apply hover:bg-primary-light;
+    @apply transition-all duration-200;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Input field */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-card;
+    @apply border border-surface-border;
+    @apply text-text-primary font-serif text-[16px];
+    @apply focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary;
+    @apply placeholder:text-text-muted;
+    @apply transition-all duration-200;
+  }
+
+  /* Select dropdown */
+  .select-field {
+    @apply w-full px-4 py-3 rounded-card;
+    @apply border border-surface-border;
+    @apply text-text-primary font-serif text-[16px];
+    @apply focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary;
+    @apply bg-surface-white;
+    @apply appearance-none cursor-pointer;
+    @apply transition-all duration-200;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+  }
+
+  /* Upload zone */
+  .upload-zone {
+    @apply border-2 border-dashed border-surface-border rounded-card;
+    @apply p-10 text-center;
+    @apply cursor-pointer;
+    @apply hover:border-primary hover:bg-primary-light;
+    @apply transition-all duration-200;
+  }
+
+  .upload-zone-active {
+    @apply border-primary bg-primary-light;
+  }
+
+  /* Error message */
+  .error-box {
+    @apply bg-status-error-light border border-status-error rounded-card;
+    @apply p-4 text-status-error text-[14px];
+  }
+
+  /* Success message */
+  .success-box {
+    @apply bg-status-success-light border border-status-success rounded-card;
+    @apply p-4 text-status-success text-[14px];
+  }
+
+  /* Report table */
+  .report-table {
+    @apply w-full border-collapse rounded-card overflow-hidden shadow-card;
+  }
+
+  .report-table thead {
+    @apply bg-primary text-white;
+  }
+
+  .report-table th {
+    @apply px-4 py-3 text-left font-bold text-[14px];
+  }
+
+  .report-table td {
+    @apply px-4 py-3 text-[14px] border-b border-surface-border;
+  }
+
+  .report-table tbody tr:nth-child(even) {
+    @apply bg-surface-light;
+  }
+
+  .report-table tbody tr:last-child {
+    @apply font-bold bg-primary-light;
+  }
+
+  .report-table tbody tr:hover {
+    @apply bg-primary-light;
+  }
+}
+
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+@keyframes progress-bar {
+  0% {
+    width: 0%;
+  }
+  20% {
+    width: 20%;
+  }
+  50% {
+    width: 50%;
+  }
+  80% {
+    width: 80%;
+  }
+  95% {
+    width: 95%;
+  }
+}
+
+.animate-progress {
+  animation: progress-bar 30s ease-out forwards;
+}
