@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import ErrorMessage from "@/components/ui/ErrorMessage";
 import FileUploader from "@/components/upload/FileUploader";
 import UploadSummary from "@/components/upload/UploadSummary";
 import ReportParameters from "@/components/parameters/ReportParameters";
@@ -35,6 +36,35 @@ function DashboardContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [generateError, setGenerateError] = useState("");
+  const [globalError, setGlobalError] = useState("");
+
+  // ========================================
+  // Session expiry check
+  // ========================================
+  useEffect(() => {
+    if (!sessionId) return;
+
+    // Warn after 50 minutes (session expires at 60)
+    const warningTimer = setTimeout(() => {
+      if (currentStep !== "upload") {
+        setGlobalError(
+          "Votre session de données expire bientôt. " +
+          "Veuillez générer votre rapport ou recharger le fichier."
+        );
+      }
+    }, 50 * 60 * 1000);
+
+    // Force reset after 60 minutes
+    const expiryTimer = setTimeout(() => {
+      setGlobalError(ERROR_MESSAGES.SESSION_EXPIRED);
+      handleNewUpload();
+    }, 60 * 60 * 1000);
+
+    return () => {
+      clearTimeout(warningTimer);
+      clearTimeout(expiryTimer);
+    };
+  }, [sessionId]);
 
   // ========================================
   // Handle file upload
@@ -42,6 +72,7 @@ function DashboardContent() {
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
     setUploadError("");
+    setGlobalError("");
 
     try {
       const response = await uploadFile(file);
@@ -49,10 +80,12 @@ function DashboardContent() {
       setUploadSummary(response.summary);
       setCurrentStep("parameters");
     } catch (err) {
-      if (err instanceof Error) {
+      if (err instanceof TypeError && err.message === "Failed to fetch") {
+        setUploadError(ERROR_MESSAGES.NETWORK_ERROR);
+      } else if (err instanceof Error) {
         setUploadError(err.message);
       } else {
-        setUploadError(ERROR_MESSAGES.NETWORK_ERROR);
+        setUploadError(ERROR_MESSAGES.UPLOAD_FAILED);
       }
     } finally {
       setIsUploading(false);
@@ -67,6 +100,7 @@ function DashboardContent() {
 
     setIsGenerating(true);
     setGenerateError("");
+    setGlobalError("");
     setReportWeek(week);
     setCurrentStep("loading");
 
@@ -74,8 +108,15 @@ function DashboardContent() {
       const response = await generateReport(sessionId, week);
       setReportData(response.report);
       setCurrentStep("report");
+
+      // Scroll to top to see the report
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 100);
     } catch (err) {
-      if (err instanceof Error) {
+      if (err instanceof TypeError && err.message === "Failed to fetch") {
+        setGenerateError(ERROR_MESSAGES.NETWORK_ERROR);
+      } else if (err instanceof Error) {
         if (err.message.includes("introuvable") || err.message.includes("expirée")) {
           setGenerateError(ERROR_MESSAGES.SESSION_EXPIRED);
         } else {
@@ -100,6 +141,7 @@ function DashboardContent() {
     setReportData(null);
     setUploadError("");
     setGenerateError("");
+    setGlobalError("");
     setReportWeek(0);
   };
 
@@ -110,48 +152,33 @@ function DashboardContent() {
     setReportWeek(0);
   };
 
-  // ========================================
-  // Scroll to report when generated
-  // ========================================
-  const scrollToReport = () => {
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 100);
-  };
-
-  // Trigger scroll when report is ready
-  if (currentStep === "report" && reportData) {
-    scrollToReport();
-  }
-
   return (
     <div className="min-h-screen bg-surface-light">
       {/* ========================================= */}
       {/* HEADER */}
       {/* ========================================= */}
-      <header className="bg-surface-white border-b border-surface-border shadow-card sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-10 py-4 flex items-center justify-between">
+      <header className="bg-surface-white border-b border-surface-border shadow-card sticky top-0 z-50 no-print">
+        <div className="max-w-6xl mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
           <div>
-            <h2>EPI-RDC</h2>
-            <p className="text-text-secondary text-[14px]">
+            <h2 className="text-[18px] md:text-[22px]">EPI-RDC</h2>
+            <p className="text-text-secondary text-[12px] md:text-[14px]">
               Rapport Épidémiologique Hebdomadaire — RDC
             </p>
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Show current state indicator */}
             {currentStep !== "upload" && (
-              <span className="text-[13px] text-text-muted hidden md:inline">
+              <span className="text-[13px] text-text-muted hidden lg:inline">
                 {currentStep === "parameters" && "Prêt à générer"}
                 {currentStep === "loading" && "Génération en cours..."}
-                {currentStep === "report" && `Rapport S${reportWeek}`}
+                {currentStep === "report" && `Rapport S${reportWeek}/${uploadSummary?.year}`}
               </span>
             )}
 
             <Button
               variant="secondary"
               onClick={logout}
-              className="text-[14px] px-4 py-2"
+              className="text-[13px] md:text-[14px] px-3 md:px-4 py-2"
             >
               Déconnexion
             </Button>
@@ -160,17 +187,28 @@ function DashboardContent() {
       </header>
 
       {/* ========================================= */}
+      {/* GLOBAL ERROR */}
+      {/* ========================================= */}
+      {globalError && (
+        <div className="max-w-6xl mx-auto px-6 md:px-10 pt-4 no-print">
+          <ErrorMessage
+            message={globalError}
+            onDismiss={() => setGlobalError("")}
+          />
+        </div>
+      )}
+
+      {/* ========================================= */}
       {/* MAIN CONTENT */}
       {/* ========================================= */}
-      <main className="max-w-6xl mx-auto px-10 py-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-6 md:px-10 py-8 space-y-8">
 
         {/* ======================================= */}
-        {/* REPORT VIEW (when report is generated) */}
+        {/* REPORT VIEW */}
         {/* ======================================= */}
         {currentStep === "report" && reportData && uploadSummary && (
           <>
-            {/* Action Bar */}
-            <section>
+            <section className="no-print">
               <Card elevated>
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div>
@@ -194,7 +232,6 @@ function DashboardContent() {
               </Card>
             </section>
 
-            {/* Report Content */}
             <section>
               <ReportViewer
                 blocks={reportData}
@@ -206,7 +243,7 @@ function DashboardContent() {
         )}
 
         {/* ======================================= */}
-        {/* UPLOAD SECTION (hide when viewing report) */}
+        {/* UPLOAD SECTION */}
         {/* ======================================= */}
         {currentStep !== "report" && (
           <section>
@@ -278,6 +315,17 @@ function DashboardContent() {
         )}
 
       </main>
+
+      {/* ========================================= */}
+      {/* FOOTER */}
+      {/* ========================================= */}
+      <footer className="border-t border-surface-border bg-surface-white mt-16 no-print">
+        <div className="max-w-6xl mx-auto px-6 md:px-10 py-4">
+          <p className="text-[12px] text-text-muted text-center">
+            EPI-RDC — Système de génération de rapports épidémiologiques hebdomadaires — République Démocratique du Congo
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

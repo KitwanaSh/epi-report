@@ -210,3 +210,57 @@
 .animate-progress {
   animation: progress-bar 30s ease-out forwards;
 }
+
+/* ================================
+   PRINT STYLES
+   ================================ */
+
+@media print {
+  /* Hide non-report elements */
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset backgrounds */
+  body {
+    background: white !important;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Report container */
+  .report-markdown,
+  .report-table {
+    break-inside: avoid;
+  }
+
+  /* Charts */
+  .recharts-responsive-container {
+    break-inside: avoid;
+  }
+
+  /* Cards — remove shadows for print */
+  .card,
+  .card-elevated {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+
+  /* Ensure text is black */
+  * {
+    color: #1A1A1A !important;
+  }
+
+  /* Table header stays visible */
+  .report-table thead {
+    background: #E0E0E0 !important;
+  }
+
+  .report-table thead th {
+    color: #1A1A1A !important;
+  }
+}
