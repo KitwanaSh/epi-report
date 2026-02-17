@@ -1,9 +1,15 @@
 "use client";
 
-import type { ContentBlock, TableContent, ChartContent } from "@/types";
+import type {
+  ContentBlock,
+  TableContent,
+  ChartContent,
+  ComparisonTableContent,
+} from "@/types";
 import MarkdownBlock from "./MarkdownBlock";
 import TableBlock from "./TableBlock";
 import ChartBlock from "./ChartBlock";
+import ComparisonTableBlock from "./ComparisonTableBlock";
 
 interface ReportViewerProps {
   blocks: ContentBlock[];
@@ -33,7 +39,8 @@ export default function ReportViewer({ blocks, year, week }: ReportViewerProps) 
         {/* Report Header Bar */}
         <div className="px-8 py-4 border-b border-surface-border bg-surface-light rounded-t-card">
           <p className="text-[13px] text-text-muted text-center">
-            République Démocratique du Congo — Ministère de la Santé — Semaine épidémiologique S{week}/{year}
+            République Démocratique du Congo — Ministère de la Santé — Semaine
+            épidémiologique S{week}/{year}
           </p>
         </div>
 
@@ -68,6 +75,13 @@ function ReportBlock({ block }: { block: ContentBlock }) {
 
     case "chart":
       return <ChartBlock content={block.content as ChartContent} />;
+
+    case "comparison_table":
+      return (
+        <ComparisonTableBlock
+          content={block.content as ComparisonTableContent}
+        />
+      );
 
     default:
       return null;

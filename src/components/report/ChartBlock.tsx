@@ -18,7 +18,15 @@ interface ChartBlockProps {
 }
 
 export default function ChartBlock({ content }: ChartBlockProps) {
-  const { title, x_label, y_bar_label, y_line_label, data } = content;
+  const {
+    title,
+    x_label,
+    y_bar_label,
+    y_line_label,
+    current_year,
+    previous_year,
+    data,
+  } = content;
 
   // Don't render chart if no data
   if (!data || data.length === 0) {
@@ -32,8 +40,15 @@ export default function ChartBlock({ content }: ChartBlockProps) {
   }
 
   // Find max values for Y axis scaling
-  const maxCases = Math.max(...data.map((d) => d.cases), 1);
-  const maxLethality = Math.max(...data.map((d) => d.lethality), 1);
+  const allCases = data.flatMap((d) => [
+    d.current_year_cases,
+    d.previous_year_cases,
+  ]);
+  const allLethality = data.flatMap((d) => [
+    d.current_year_lethality,
+    d.previous_year_lethality,
+  ]);
+  const maxLethality = Math.max(...allLethality, 1);
 
   return (
     <div className="my-6">
@@ -46,7 +61,7 @@ export default function ChartBlock({ content }: ChartBlockProps) {
 
       {/* Chart Container */}
       <div className="bg-surface-white rounded-card border border-surface-border shadow-card p-4">
-        <ResponsiveContainer width="100%" height={350}>
+        <ResponsiveContainer width="100%" height={380}>
           <ComposedChart
             data={data}
             margin={{ top: 10, right: 30, left: 10, bottom: 20 }}
@@ -61,21 +76,33 @@ export default function ChartBlock({ content }: ChartBlockProps) {
             {/* X Axis — Weeks */}
             <XAxis
               dataKey="week"
-              tick={{ fontSize: 13, fontFamily: "Times New Roman, Arial, serif", fill: "#666666" }}
+              tick={{
+                fontSize: 13,
+                fontFamily: "Times New Roman, Arial, serif",
+                fill: "#666666",
+              }}
               axisLine={{ stroke: "#E0E0E0" }}
               tickLine={{ stroke: "#E0E0E0" }}
               label={{
                 value: x_label,
                 position: "insideBottom",
                 offset: -10,
-                style: { fontSize: 13, fontFamily: "Times New Roman, Arial, serif", fill: "#666666" },
+                style: {
+                  fontSize: 13,
+                  fontFamily: "Times New Roman, Arial, serif",
+                  fill: "#666666",
+                },
               }}
             />
 
             {/* Y Axis Left — Cases (Bars) */}
             <YAxis
               yAxisId="left"
-              tick={{ fontSize: 13, fontFamily: "Times New Roman, Arial, serif", fill: "#666666" }}
+              tick={{
+                fontSize: 13,
+                fontFamily: "Times New Roman, Arial, serif",
+                fill: "#666666",
+              }}
               axisLine={{ stroke: "#E0E0E0" }}
               tickLine={{ stroke: "#E0E0E0" }}
               label={{
@@ -83,15 +110,23 @@ export default function ChartBlock({ content }: ChartBlockProps) {
                 angle: -90,
                 position: "insideLeft",
                 offset: 0,
-                style: { fontSize: 13, fontFamily: "Times New Roman, Arial, serif", fill: "#666666" },
+                style: {
+                  fontSize: 13,
+                  fontFamily: "Times New Roman, Arial, serif",
+                  fill: "#666666",
+                },
               }}
             />
 
-            {/* Y Axis Right — Lethality (Line) */}
+            {/* Y Axis Right — Lethality (Lines) */}
             <YAxis
               yAxisId="right"
               orientation="right"
-              tick={{ fontSize: 13, fontFamily: "Times New Roman, Arial, serif", fill: "#666666" }}
+              tick={{
+                fontSize: 13,
+                fontFamily: "Times New Roman, Arial, serif",
+                fill: "#666666",
+              }}
               axisLine={{ stroke: "#E0E0E0" }}
               tickLine={{ stroke: "#E0E0E0" }}
               label={{
@@ -99,9 +134,13 @@ export default function ChartBlock({ content }: ChartBlockProps) {
                 angle: 90,
                 position: "insideRight",
                 offset: 10,
-                style: { fontSize: 13, fontFamily: "Times New Roman, Arial, serif", fill: "#666666" },
+                style: {
+                  fontSize: 13,
+                  fontFamily: "Times New Roman, Arial, serif",
+                  fill: "#666666",
+                },
               }}
-              domain={[0, Math.ceil(maxLethality * 1.2)]}
+              domain={[0, Math.ceil(maxLethality * 1.3)]}
             />
 
             {/* Tooltip */}
@@ -114,12 +153,9 @@ export default function ChartBlock({ content }: ChartBlockProps) {
                 borderRadius: 8,
                 boxShadow: "0 4px 6px rgba(0, 0, 0, 0.07)",
               }}
-              formatter={(value: number | undefined, name: string | undefined) => {
-                if (value === undefined || name === undefined) return ["", ""];
-                if (name === "Cas") return [value.toLocaleString("fr-FR"), name];
-                if (name === "Décès") return [value.toLocaleString("fr-FR"), name];
-                if (name === "Létalité (%)") return [`${value}%`, name];
-                return [value, name];
+              formatter={(value: number, name: string) => {
+                if (name.includes("Létalité")) return [`${value}%`, name];
+                return [value.toLocaleString("fr-FR"), name];
               }}
               labelStyle={{
                 fontWeight: "bold",
@@ -131,37 +167,66 @@ export default function ChartBlock({ content }: ChartBlockProps) {
             <Legend
               wrapperStyle={{
                 fontFamily: "Times New Roman, Arial, serif",
-                fontSize: 13,
+                fontSize: 12,
                 paddingTop: 16,
               }}
             />
 
-            {/* Bars — Cases */}
+            {/* ===== PREVIOUS YEAR (left bars, first in order) ===== */}
+
+            {/* Bars — Previous Year Cases */}
             <Bar
               yAxisId="left"
-              dataKey="cases"
-              name="Cas"
+              dataKey="previous_year_cases"
+              name={`Cas ${previous_year}`}
+              fill="#CBD5E1"
+              radius={[3, 3, 0, 0]}
+              maxBarSize={35}
+            />
+
+            {/* ===== CURRENT YEAR (right bars, second in order) ===== */}
+
+            {/* Bars — Current Year Cases */}
+            <Bar
+              yAxisId="left"
+              dataKey="current_year_cases"
+              name={`Cas ${current_year}`}
               fill="#0EA5E9"
               radius={[3, 3, 0, 0]}
-              maxBarSize={50}
+              maxBarSize={35}
             />
 
-            {/* Bars — Deaths */}
-            <Bar
-              yAxisId="left"
-              dataKey="deaths"
-              name="Décès"
-              fill="#1A1A1A"
-              radius={[3, 3, 0, 0]}
-              maxBarSize={50}
-            />
+            {/* ===== LETHALITY LINES ===== */}
 
-            {/* Line — Lethality */}
+            {/* Line — Previous Year Lethality */}
             <Line
               yAxisId="right"
               type="monotone"
-              dataKey="lethality"
-              name="Létalité (%)"
+              dataKey="previous_year_lethality"
+              name={`Létalité ${previous_year} (%)`}
+              stroke="#94A3B8"
+              strokeWidth={2}
+              strokeDasharray="6 3"
+              dot={{
+                fill: "#94A3B8",
+                stroke: "#FFFFFF",
+                strokeWidth: 2,
+                r: 4,
+              }}
+              activeDot={{
+                fill: "#94A3B8",
+                stroke: "#FFFFFF",
+                strokeWidth: 2,
+                r: 6,
+              }}
+            />
+
+            {/* Line — Current Year Lethality */}
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="current_year_lethality"
+              name={`Létalité ${current_year} (%)`}
               stroke="#DC2626"
               strokeWidth={2}
               dot={{
@@ -179,6 +244,28 @@ export default function ChartBlock({ content }: ChartBlockProps) {
             />
           </ComposedChart>
         </ResponsiveContainer>
+
+        {/* Chart Legend Explanation */}
+        <div className="mt-3 pt-3 border-t border-surface-border">
+          <div className="flex flex-wrap justify-center gap-6 text-[12px] text-text-muted">
+            <span className="flex items-center gap-2">
+              <span className="inline-block w-4 h-3 bg-[#CBD5E1] rounded-sm" />
+              Cas {previous_year}
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="inline-block w-4 h-3 bg-[#0EA5E9] rounded-sm" />
+              Cas {current_year}
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-dashed border-[#94A3B8]" />
+              Létalité {previous_year}
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="inline-block w-8 border-t-2 border-[#DC2626]" />
+              Létalité {current_year}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
