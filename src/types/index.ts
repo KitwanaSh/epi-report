@@ -1,25 +1,34 @@
 /**
- * TypeScript interfaces matching the backend API responses.
+ * TypeScript interfaces matching the updated backend API responses.
  */
 
 // ================================
 // Upload Response
 // ================================
 
-export interface DataSummary {
+export interface FileSummary {
   filename: string;
   total_rows: number;
   total_rows_filtered: number;
   year: number;
   weeks_available: number[];
+}
+
+export interface UploadSummary {
+  current_year_file: FileSummary;
+  previous_year_file: FileSummary;
+  current_year: number;
+  previous_year: number;
+  weeks_available: number[];
   diseases_found: string[];
+  provinces: string[];
   provinces_count: number;
 }
 
 export interface UploadResponse {
   status: string;
   session_id: string;
-  summary: DataSummary;
+  summary: UploadSummary;
 }
 
 // ================================
@@ -29,6 +38,7 @@ export interface UploadResponse {
 export interface ReportRequest {
   session_id: string;
   week: number;
+  province?: string | null;
 }
 
 // ================================
@@ -38,9 +48,12 @@ export interface ReportRequest {
 export interface ChartDataPoint {
   week: string;
   week_number: number;
-  cases: number;
-  deaths: number;
-  lethality: number;
+  current_year_cases: number;
+  current_year_deaths: number;
+  current_year_lethality: number;
+  previous_year_cases: number;
+  previous_year_deaths: number;
+  previous_year_lethality: number;
 }
 
 export interface ChartContent {
@@ -49,6 +62,8 @@ export interface ChartContent {
   x_label: string;
   y_bar_label: string;
   y_line_label: string;
+  current_year: number;
+  previous_year: number;
   data: ChartDataPoint[];
 }
 
@@ -66,15 +81,42 @@ export interface TableContent {
   rows: TableRow[];
 }
 
+export interface ComparisonWeekBreakdown {
+  week: number;
+  cases: number;
+  deaths: number;
+}
+
+export interface ComparisonTableRow {
+  maladie: string;
+  maladie_key: string;
+  cumul_previous_cases: number;
+  cumul_previous_deaths: number;
+  cumul_current_cases: number;
+  cumul_current_deaths: number;
+  weekly_breakdown: ComparisonWeekBreakdown[];
+}
+
+export interface ComparisonTableContent {
+  title: string;
+  current_year: number;
+  previous_year: number;
+  week: number;
+  weeks_shown: number[];
+  rows: ComparisonTableRow[];
+}
+
 export interface ContentBlock {
-  type: "markdown" | "table" | "chart";
-  content: string | TableContent | ChartContent;
+  type: "markdown" | "table" | "chart" | "comparison_table";
+  content: string | TableContent | ChartContent | ComparisonTableContent;
 }
 
 export interface ReportResponse {
   status: string;
   year: number;
+  previous_year: number;
   week: number;
+  province: string | null;
   report: ContentBlock[];
 }
 
