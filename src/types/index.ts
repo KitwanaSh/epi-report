@@ -46,14 +46,14 @@ export interface ReportRequest {
 // ================================
 
 export interface ChartDataPoint {
-  week: string;
+  label: string;
   week_number: number;
-  current_year_cases: number;
-  current_year_deaths: number;
-  current_year_lethality: number;
-  previous_year_cases: number;
-  previous_year_deaths: number;
-  previous_year_lethality: number;
+  year: number;
+  group: "previous_year" | "current_trend";
+  cases: number;
+  deaths: number;
+  lethality: number;
+  borrowed: boolean;
 }
 
 export interface ChartContent {
@@ -64,6 +64,7 @@ export interface ChartContent {
   y_line_label: string;
   current_year: number;
   previous_year: number;
+  separator_index: number;
   data: ChartDataPoint[];
 }
 

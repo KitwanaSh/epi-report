@@ -10,12 +10,21 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceLine,
+  Cell,
 } from "recharts";
 import type { ChartContent } from "@/types";
 
 interface ChartBlockProps {
   content: ChartContent;
 }
+
+// Colors
+const COLOR_PREVIOUS_YEAR = "#CBD5E1";
+const COLOR_CURRENT_YEAR = "#0EA5E9";
+const COLOR_BORROWED = "#93C5FD";
+const COLOR_LETHALITY = "#DC2626";
+const COLOR_SEPARATOR = "#1A1A1A";
 
 export default function ChartBlock({ content }: ChartBlockProps) {
   const {
@@ -25,6 +34,7 @@ export default function ChartBlock({ content }: ChartBlockProps) {
     y_line_label,
     current_year,
     previous_year,
+    separator_index,
     data,
   } = content;
 
@@ -39,16 +49,24 @@ export default function ChartBlock({ content }: ChartBlockProps) {
     );
   }
 
-  // Find max values for Y axis scaling
-  const allCases = data.flatMap((d) => [
-    d.current_year_cases,
-    d.previous_year_cases,
-  ]);
-  const allLethality = data.flatMap((d) => [
-    d.current_year_lethality,
-    d.previous_year_lethality,
-  ]);
-  const maxLethality = Math.max(...allLethality, 1);
+  // Build chart data with unique X axis keys
+  const chartData = data.map((point, index) => ({
+    ...point,
+    // Create unique key for X axis since week labels can repeat across groups
+    xKey: index,
+    // Display label for X axis
+    displayLabel: point.label,
+    // Bar value (single bar per data point, colored by group)
+    barCases: point.cases,
+    barDeaths: point.deaths,
+  }));
+
+  // Calculate max values for Y axis
+  const maxCases = Math.max(...data.map((d) => d.cases), 1);
+  const maxLethality = Math.max(...data.map((d) => d.lethality), 1);
+
+  // Separator position (between last previous_year point and first current_trend point)
+  const separatorPosition = separator_index - 0.5;
 
   return (
     <div className="my-6">
@@ -59,11 +77,25 @@ export default function ChartBlock({ content }: ChartBlockProps) {
         </p>
       )}
 
+      {/* Year Group Labels */}
+      <div className="flex justify-center gap-0 mb-2">
+        <div className="flex-1 text-center">
+          <span className="text-[13px] font-bold text-text-secondary">
+            {previous_year}
+          </span>
+        </div>
+        <div className="flex-1 text-center">
+          <span className="text-[13px] font-bold text-text-primary">
+            {current_year}
+          </span>
+        </div>
+      </div>
+
       {/* Chart Container */}
       <div className="bg-surface-white rounded-card border border-surface-border shadow-card p-4">
         <ResponsiveContainer width="100%" height={380}>
           <ComposedChart
-            data={data}
+            data={chartData}
             margin={{ top: 10, right: 30, left: 10, bottom: 20 }}
           >
             {/* Grid */}
@@ -73,16 +105,39 @@ export default function ChartBlock({ content }: ChartBlockProps) {
               vertical={false}
             />
 
-            {/* X Axis — Weeks */}
+            {/* X Axis */}
             <XAxis
-              dataKey="week"
-              tick={{
-                fontSize: 13,
-                fontFamily: "Times New Roman, Arial, serif",
-                fill: "#666666",
+              dataKey="xKey"
+              tick={({ x, y, payload }: any) => {
+                const point = chartData[payload.value];
+                if (!point) return <g />;
+
+                return (
+                  <g transform={`translate(${x},${y})`}>
+                    <text
+                      x={0}
+                      y={0}
+                      dy={14}
+                      textAnchor="middle"
+                      fill={
+                        point.group === "previous_year"
+                          ? "#94A3B8"
+                          : point.borrowed
+                            ? "#60A5FA"
+                            : "#1A1A1A"
+                      }
+                      fontSize={12}
+                      fontFamily="Times New Roman, Arial, serif"
+                      fontWeight={point.group === "current_trend" && !point.borrowed ? "bold" : "normal"}
+                    >
+                      {point.displayLabel}
+                    </text>
+                  </g>
+                );
               }}
               axisLine={{ stroke: "#E0E0E0" }}
               tickLine={{ stroke: "#E0E0E0" }}
+              interval={0}
               label={{
                 value: x_label,
                 position: "insideBottom",
@@ -95,7 +150,7 @@ export default function ChartBlock({ content }: ChartBlockProps) {
               }}
             />
 
-            {/* Y Axis Left — Cases (Bars) */}
+            {/* Y Axis Left — Cases */}
             <YAxis
               yAxisId="left"
               tick={{
@@ -118,7 +173,7 @@ export default function ChartBlock({ content }: ChartBlockProps) {
               }}
             />
 
-            {/* Y Axis Right — Lethality (Lines) */}
+            {/* Y Axis Right — Lethality */}
             <YAxis
               yAxisId="right"
               orientation="right"
@@ -143,6 +198,15 @@ export default function ChartBlock({ content }: ChartBlockProps) {
               domain={[0, Math.ceil(maxLethality * 1.3)]}
             />
 
+            {/* Vertical Separator Line */}
+            <ReferenceLine
+              yAxisId="left"
+              x={separatorPosition}
+              stroke={COLOR_SEPARATOR}
+              strokeWidth={2}
+              strokeDasharray="6 4"
+            />
+
             {/* Tooltip */}
             <Tooltip
               contentStyle={{
@@ -153,116 +217,126 @@ export default function ChartBlock({ content }: ChartBlockProps) {
                 borderRadius: 8,
                 boxShadow: "0 4px 6px rgba(0, 0, 0, 0.07)",
               }}
-              formatter={(value: number, name: string) => {
-                if (name.includes("Létalité")) return [`${value}%`, name];
-                return [value.toLocaleString("fr-FR"), name];
-              }}
-              labelStyle={{
-                fontWeight: "bold",
-                marginBottom: 4,
+              content={({ active, payload }) => {
+                if (!active || !payload || !payload.length) return null;
+
+                const point = payload[0]?.payload;
+                if (!point) return null;
+
+                const yearLabel = point.year;
+                const groupLabel =
+                  point.group === "previous_year"
+                    ? `${previous_year}`
+                    : point.borrowed
+                      ? `${point.year} (tendance)`
+                      : `${current_year}`;
+
+                return (
+                  <div
+                    className="bg-white border border-surface-border rounded-card shadow-card-md p-3"
+                    style={{ fontFamily: "Times New Roman, Arial, serif" }}
+                  >
+                    <p className="font-bold text-[13px] mb-1">
+                      {point.displayLabel} — {groupLabel}
+                    </p>
+                    <p className="text-[13px] text-text-secondary">
+                      Cas : {point.cases.toLocaleString("fr-FR")}
+                    </p>
+                    <p className="text-[13px] text-text-secondary">
+                      Décès : {point.deaths.toLocaleString("fr-FR")}
+                    </p>
+                    <p className="text-[13px]" style={{ color: COLOR_LETHALITY }}>
+                      Létalité : {point.lethality}%
+                    </p>
+                  </div>
+                );
               }}
             />
 
-            {/* Legend */}
-            <Legend
-              wrapperStyle={{
-                fontFamily: "Times New Roman, Arial, serif",
-                fontSize: 12,
-                paddingTop: 16,
-              }}
-            />
-
-            {/* ===== PREVIOUS YEAR (left bars, first in order) ===== */}
-
-            {/* Bars — Previous Year Cases */}
+            {/* Bars — Cases (colored by group) */}
             <Bar
               yAxisId="left"
-              dataKey="previous_year_cases"
-              name={`Cas ${previous_year}`}
-              fill="#CBD5E1"
+              dataKey="barCases"
+              name="Cas"
               radius={[3, 3, 0, 0]}
-              maxBarSize={35}
-            />
+              maxBarSize={40}
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={
+                    entry.group === "previous_year"
+                      ? COLOR_PREVIOUS_YEAR
+                      : entry.borrowed
+                        ? COLOR_BORROWED
+                        : COLOR_CURRENT_YEAR
+                  }
+                />
+              ))}
+            </Bar>
 
-            {/* ===== CURRENT YEAR (right bars, second in order) ===== */}
-
-            {/* Bars — Current Year Cases */}
-            <Bar
-              yAxisId="left"
-              dataKey="current_year_cases"
-              name={`Cas ${current_year}`}
-              fill="#0EA5E9"
-              radius={[3, 3, 0, 0]}
-              maxBarSize={35}
-            />
-
-            {/* ===== LETHALITY LINES ===== */}
-
-            {/* Line — Previous Year Lethality */}
+            {/* Line — Lethality (single continuous line) */}
             <Line
               yAxisId="right"
               type="monotone"
-              dataKey="previous_year_lethality"
-              name={`Létalité ${previous_year} (%)`}
-              stroke="#94A3B8"
+              dataKey="lethality"
+              name="Létalité (%)"
+              stroke={COLOR_LETHALITY}
               strokeWidth={2}
-              strokeDasharray="6 3"
               dot={{
-                fill: "#94A3B8",
+                fill: COLOR_LETHALITY,
                 stroke: "#FFFFFF",
                 strokeWidth: 2,
                 r: 4,
               }}
               activeDot={{
-                fill: "#94A3B8",
+                fill: COLOR_LETHALITY,
                 stroke: "#FFFFFF",
                 strokeWidth: 2,
                 r: 6,
               }}
-            />
-
-            {/* Line — Current Year Lethality */}
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="current_year_lethality"
-              name={`Létalité ${current_year} (%)`}
-              stroke="#DC2626"
-              strokeWidth={2}
-              dot={{
-                fill: "#DC2626",
-                stroke: "#FFFFFF",
-                strokeWidth: 2,
-                r: 4,
-              }}
-              activeDot={{
-                fill: "#DC2626",
-                stroke: "#FFFFFF",
-                strokeWidth: 2,
-                r: 6,
-              }}
+              connectNulls
             />
           </ComposedChart>
         </ResponsiveContainer>
 
-        {/* Chart Legend Explanation */}
+        {/* Custom Legend */}
         <div className="mt-3 pt-3 border-t border-surface-border">
-          <div className="flex flex-wrap justify-center gap-6 text-[12px] text-text-muted">
+          <div className="flex flex-wrap justify-center gap-5 text-[12px] text-text-muted">
             <span className="flex items-center gap-2">
-              <span className="inline-block w-4 h-3 bg-[#CBD5E1] rounded-sm" />
+              <span
+                className="inline-block w-4 h-3 rounded-sm"
+                style={{ backgroundColor: COLOR_PREVIOUS_YEAR }}
+              />
               Cas {previous_year}
             </span>
             <span className="flex items-center gap-2">
-              <span className="inline-block w-4 h-3 bg-[#0EA5E9] rounded-sm" />
+              <span
+                className="inline-block w-4 h-3 rounded-sm"
+                style={{ backgroundColor: COLOR_CURRENT_YEAR }}
+              />
               Cas {current_year}
             </span>
             <span className="flex items-center gap-2">
-              <span className="inline-block w-8 border-t-2 border-dashed border-[#94A3B8]" />
-              Létalité {previous_year}
+              <span
+                className="inline-block w-4 h-3 rounded-sm"
+                style={{ backgroundColor: COLOR_BORROWED }}
+              />
+              Tendance (fin {previous_year})
             </span>
             <span className="flex items-center gap-2">
-              <span className="inline-block w-8 border-t-2 border-[#DC2626]" />
-              Létalité {current_year}
+              <span
+                className="inline-block w-8 border-t-2"
+                style={{ borderColor: COLOR_LETHALITY }}
+              />
+              Létalité (%)
+            </span>
+            <span className="flex items-center gap-2">
+              <span
+                className="inline-block w-8 border-t-2 border-dashed"
+                style={{ borderColor: COLOR_SEPARATOR }}
+              />
+              Séparateur
             </span>
           </div>
         </div>
